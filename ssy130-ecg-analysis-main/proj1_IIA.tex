@@ -1,0 +1,250 @@
+\documentclass[12pt]{article}
+
+\usepackage{a4wide}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{artmacros}
+\usepackage{bm}
+
+
+\begin{document}
+\title{Analysis of ECG Signals \\ Project in SSY130 }
+\author{Tomas McKelvey}
+
+\maketitle{}
+\section{Introduction}
+\label{sec:introduction}
+The regular contractions of the heart muscle provide the necessary pumping action in order to keep the blood circulating throughout the body. The blood circulation carries oxygen and nutrients to the body tissues and removes carbon dioxide and other waste products from the tissues.
+Hence, the function of the heart has been a long standing focus in medicin and various ways to measure this functionality exists. In this project we will focus on measurements which captures the electrical activity of the heart muscle. In electrocardiography (ECG), the electrical potential on the surface of the skin at various locations on the chest and limbs is sensed by electrodes. The signals sensed by the electrode can be used for diagnostic purposes in orderer to detect and classify different pathological conditions of the heart. In the 12-lead ECG system setup 6 electrodes are placed on the chest and 4 leads are placed on the limbs. From these 10 electrodes, 12 different electrical signals are derived by measuring the voltage (difference in electrical potential) from various combinations of the electrodes \cite{cablesandsensors12LeadECGPlacement}.    
+
+\section{Heart rate estimation using the Fourier transform}
+One of the simplest quantities which relate to the heart activity is the heart rate which is defined as the number of heart beats (contractions) per minute (bpm). For a person at rest the ECG traces (the 12-leads) reveal a periodically repeating signal pattern and one possibility to measure the heart rate is to perform a frequency analysis of the ECG traces. If we assume the heart rate is constant and each heart beat produces the same signal pattern we could model the ECG signal as an infinite Fourier series
+\begin{equation}
+  \label{eq:1}
+   x(t) = \sum_{k=0}^{\infty} a_k  \cos( k \omega_0 t + \varphi_k)
+\end{equation}
+where $\omega_0$ is the fundamental frequency in rad/s. The heart rate $\mathrm{HR}$ [bpm] is hence
+\begin{equation}
+  \label{eq:2}
+  \mathrm{HR} = 60 \frac{\omega_0}{2\pi} \quad [\text{bpm}]
+\end{equation}
+For an ECG signal, the spectral component ($\sim \cos(\omega_0t) )$ with the lowest frequency can hence be used to determine the heart rate.
+
+It is your task to create a Fourier based heart rate estimator which analyses a finite sequence of sampled ECG data from one of the leads. We depart from the CT model in \eqref{eq:1} and assume the signal is filtered with an ideal lowpass filter before sampling so we have no significant sampling distortion.  After sampling we can then assume a DT model as
+\begin{equation}
+  \label{eq:3}
+  x(n) = \sum_{k=0}^{N_h} a_k \cos( k \omega_0 \Delta t n + \varphi_k)
+\end{equation}
+where $N_h$ denotes the number of harmonics that are retained after lowpass filtering. The discrete time Fourier transform (DTFT) of the (infinite long) signal in \eqref{eq:3} will have delta functions located at $\omega= \pm k \omega_0$ for $k=0,\ldots,N_h$. In reality we only have access to $x(n)$ for $n=0,1,\ldots,N-1$, i.e. we observe the signal through a window of size $N$. We can model this as
+\begin{equation}
+  \label{eq:4}
+  x_w(n) = w(n) x(n) 
+\end{equation}
+where $w(n)$ is a window function which is non-zero only for indices $n=0,1,\ldots,N-1$.  The DTFT of the windowed signal is hence
+\begin{equation}
+  \label{eq:5}
+  X_w(\omega) = \sum_{n=0}^{N-1} w(n) x(n) e^{-j\omega \Delta t n} = \frac{1}{\omega_s} \int_0^{\omega_s} W(\xi) X(\omega-\xi) d\xi
+\end{equation}
+Based on the result of question 2 below we have
+\begin{equation}
+  \label{eq:7}
+  X_w(\omega) = \frac{1}{\omega_s} \int_0^{\omega_s} W(\xi) X(\omega-\xi) d\xi = \beta_0 W(\omega)  + \sum_{k=1}^{N_h} \beta_k W(\omega-k \omega_0)  + \beta^*_k W(\omega+k \omega_0)  
+\end{equation}
+The DTFT of the finite and windowed signal is hence the sum of weighted and frequency shifted versions of the DTFT of the window function $w(n)$.
+
+The \textsc{Matlab} command \texttt{fft} calculates the DTFT at a fixed equidistant grid of frequencies. If \texttt{x} is an array/vector of length $N$ with the samples $x(n)$ for $n=0,1,\ldots,N-1$ and \texttt{w} is an array with the window function $w(n)$ (of same length $N)$ then the command
+\begin{center}
+\begin{verbatim}
+Xw = fft(w.*x,Ndtft);
+\end{verbatim}
+\end{center}
+results in the array \texttt{X} of length \texttt{Ndtft} which contain the DTFT of $x_w(n)$, i.e.\ $ X_w(\omega) $ calculated at frequencies $$\omega= 0, \omega_s/N_\text{dtft}, 2\omega_s/N_\text{dtft},\ldots ,(N_\text{dtft}-1) \omega_s / N_\text{dtft} $$
+
+\subsection{Data}
+\label{sec:data}
+
+For this project part you will evaluate your developed tools on a dataset with ECG recordings from 28 Norwegian endurance athletes \cite{singstad2022norwegian,goldberger2000physiobank}. You find the data in the array variable \texttt{data} in the located in the \textsc{Matlab} data file \texttt{data/ath.mat}.  The sample rate is $f_s=500$ Hz.  The array has three dimensions. The first dimension correspond to sample indices (5000 samples), the second dimension relates to the specific lead type (12 lead-types) ('I', 'II', 'III', 'AVR', 'AVL', 'AVF', 'V1', 'V2', 'V3', 'V4', 'V5', 'V6') and the last dimension is the athlete number (28 athletes).  Hence the \textsc{Matlab} expression \texttt{x=data(:,4,10)} will result in a one dimensional vector x with the ECG trace from lead 'AVR' from athlete number 10. 
+
+\subsection{Tasks}
+\label{sec:tasks}
+\begin{enumerate}
+\item Load the data file in \textsc{Matlab} and plot some traces:
+\begin{verbatim}
+load('data/ath.mat');
+plot(data(:,4,12); 
+\end{verbatim}
+\item With visual inspection of the plot estimate the heart rate for each athlete (number of beats / time). Use unit bpm (beats per minute).
+\item Implement a \textsc{Matlab} function \texttt{fbmp(x,fs)} which take as arguments \texttt{x} the vector with the ECG trace and \texttt{fs} the sample rate and produces as a result an estimate of the heart rate using Fourier analysis. From the theory discussed above  we know we are interested in the frequency of the fundamental component $\omega_0$. Hence, the frequency of the largest peak of $|X_w(\omega)|$ in the frequency band which corresponds to possible (human) heart rates (35-200 bpm) is a good way to estimate the heart rate of the ECG trace. Implement the function and verify that your answers are in reasonable agreement with the heart rates resulting from the manual inspection.  You can start with a rectangular window function i.e. $w(n)=1$ in the expressions above.  Besides the \texttt{fft} function which calculates the samples of the DTFT  the following functions are useful:
+  \begin{description}
+  \item[\texttt{abs}] A function which returns the absolute value.
+  \item[\texttt{find}] A function which find the indices to non-zero entries. for example
+\begin{verbatim}
+Iset= find( x>10 & x<20)
+\end{verbatim}
+returns an array assigned to \texttt{Iset} with all indices to the elements in \texttt{x} which are larger than 10 and smaller than 20. 
+  \item[\texttt{max}] A function which find the maximum value of the elements in an array and the index to it. For example
+\begin{verbatim}
+[mval,idx] = max( x>10 & x<20)
+\end{verbatim}
+returns the maximal value stored in \texttt{mval} and \texttt{idx} is the index to the location of the maximal value in \texttt{x}. 
+  \end{description}
+\item Test your function on all ECG traces in the dataset. For each
+  athlete you will get 12 heart rate estimates, one for each
+  lead. Compare with the results you obtained from your visual inspection.  
+\item Make a result plot where you on the x-axis have the athlete number and on the y-axis plot all 12 estimates as '+' symbols, the heart rate from the visual inspection as the 'o' symbol and the mean value from the 12 estimates as a square 's'.  The script \texttt{plotresults.m} shows you how to achieve this in \textsc{Matlab}.
+\item (Optional) Try some other window functions instead of the rectangular window. Some window functions available in \textsc{Matlab} are \texttt{chebwin,taylorwin, gausswin, kaiser} and  \texttt{tukeywin}. What is the result? 
+\end{enumerate}
+
+\subsection{Questions}
+\label{sec:questions}
+\begin{enumerate}
+\item How is $N_h$ related to the sampling frequency $f_s$ and the heart rate $\mathrm{HR}$?
+\item The command \texttt{X=fft(x,Ndtft)} calculates \texttt{Ndtft} samples of the DTFT. \textsc{Matlab} indices start with 1 and hence \texttt{X(1)} is equal to $X(0)$. Since the frequency grid is equidistant then \texttt{X(2)} contain the value $X(2\pi f_s/N_\text{dtft})$. What frequency does the value \texttt{X(Ndtft)} correspond to? 
+ \item Show that the DTFT of the signal in \eqref{eq:3} has the form 
+  \begin{equation}
+    \label{eq:6}
+    X(\omega) = \beta_0 \delta(\omega)  + \sum_{k=1}^{N_h} \beta_k \delta(\omega-k \omega_0)  + \beta^*_k \delta(\omega+k \omega_0)  
+  \end{equation}
+  for $\-\omega_s/2<\omega<\omega_s/2$
+\end{enumerate}
+
+\section{Harmonic disturbance cancellation using Local Models FIR design}
+\label{sec:harm-dist-canc}
+As the ECG signals are weak and the electrical wires long they are
+susceptible to electromagnetic interference from the electrical power
+lines in the building. In europe the system is based on 50 Hz AC and
+the disturbance from the power lines will appear as 50 Hz sinusoidal
+signal added to the ECG signal. We can express this disturbance signal
+as
+\begin{equation}
+  \label{eq:14}
+  z(n) = A(n) \cos(2\pi n f_0/f_s + \phi(n) )  =  a(n) \cos(2\pi n
+  f_0/f_s) +  b(n) \sin(2\pi n f_0/f_s) 
+\end{equation}
+where the $a(n)$ and $b(n)$ gains are assumed to vary slowly.
+
+In this part of the project you will implement a FIR filter which is specifically tuned to cancel the 50 Hz disturbance. We will base the design on the concept of local signal modelling as described in Chapter 8 in the lectures notes. In this case we will provide a local model with order $p=2$ of the \emph{disturbance} and use the basis functions
+\begin{equation}
+  \label{eq:8}
+  \begin{aligned}
+    f_0(m) &= \cos(2\pi m f_0/f_s) \\
+    f_1(m) & = \sin(2\pi m f_0/f_s )
+  \end{aligned}
+\end{equation}
+where $f_0=50$ Hz. Note that the local model assumes the gains for the
+basis functions to be constant. Hence, if $a(n)$ and $b(n)$ is
+essentially constant in the window with indices $n-M<n<n+M$ the model
+is a good local approximation of the disturbance given by
+\eqref{eq:14}.
+
+ The matrix $R$ (see lecture notes) is in this case
+\begin{equation}
+  \mathbf{R} = \ma{\cos(-2\pi M f_0/f_s) & \sin(-2\pi M f_0/f_s) \\
+  \cos(-2\pi (M-1) f_0/f_s) & \sin(-2\pi (M-1) f_0/f_s) \\ 
+\vdots & \vdots \\
+  \cos(0) & \sin(0) \\
+\vdots  & \vdots \\
+\cos(2\pi M f_0/f_s) & \sin(2\pi M f_0/f_s) }\label{eq:9}
+\end{equation}
+We look for a causal filter so $m_0=M$ which yields
+\begin{equation}
+  \label{eq:10}
+  \mathbf{f}^T(m_0) = \ma{\cos(2\pi M f_0/f_s) & \sin(2\pi M f_0/f_s)}
+\end{equation}
+and the impulse response of the causal filter is given by
+\begin{equation}
+  \label{eq:11}
+  \ma{h({2M}) & \ldots & h(0)}  = \mathbf{f}^T(m_0) ( \mathbf{R}^T \mathbf{R})^{-1}   \mathbf{R}^T
+\end{equation}
+The local estimate of the disturbance signal is then given by the FIR filter output
+\begin{equation}
+  \label{eq:12}
+  \hat z(n) = \sum_{k=0}^{2M} h(k) x(n-k)
+\end{equation}
+and to obtain the ECG signal with the 50 Hz component removed we simply subtract it from $x(n)$
+\begin{equation}
+  \label{eq:13}
+  x_\text{ECG}(n) = x(n) - \hat z(n) = x(n)- \sum_{k=0}^{2M} h(k) x(n-k)
+\end{equation}
+
+\subsection{Tasks}
+\label{sec:tasks-1}
+\begin{enumerate}
+\item The file \texttt{createdisturbance.m} contain the definition of the
+function with the same name that generates a 50 Hz disturbance. Look
+at the defintion to understand the action of the function argument
+\texttt{gain}. Create a disturbance with \texttt{gain=0}  and add
+it to one of the ECG traces. Plot the resulting signal. Clearly not
+the result is not easy to interpret. 
+\item Create a FIR filter using the local modeling design framework as
+  outlined above. The function \texttt{lmfir} will do the design but
+  need as one of the input argument a function handle to the function
+  which calculates the basis functions. In the file \texttt{sincos.m}
+  a function with the same name is defined. It is your task to
+  complete the file so we get the correct basis functions according to
+  \eqref{eq:8}. 
+\item The following commands Illustrate the use of the technique:
+\begin{verbatim}
+gain = 0;
+z = createdisturbance(N,gain);
+x0 = data(:,1,1); %ECG trace
+x = z + x0; %Add to the ECG trace
+h = lmfir(@sincos,2,M,M); %create filter
+zhat = filter(h,1,x); % Filter out disturbance
+xhat = x-zhat;
+plot(xhat) ; %the cleaned signal
+plot(xhat-x0) % the remaining error 
+norm(xhat(1000:end)-x0(1000:end))/sqrt(N-1000) % show the RMS error 
+                                               % efter filter transient
+\end{verbatim}
+Investigate different values of \texttt{M} $1,10,50,100,200,400$ and reflect on it's
+meaning.
+\item In the previous step the amplitude and phase of the disturbance
+  was fixed over time. In a realistic setting the amplitude and phase
+  will vary with movements in the surrounding. A more realistic
+  disturbance signal is with \texttt{gain=0.001}. Test different
+  values of $M$ and try to find the best value. Note that a new call
+  to \texttt{createdisturbance} will give a new noise realization so
+  the resulting RMS error will vary slightly with different realizations.
+\item Increase the variability of th disturbance by setting
+  $\texttt{gain=0.01}$. What is a good value of \texttt{M} now?
+  Explain why this value is different from the case when
+  $\texttt{gain=0.001}$.
+\item (Optional) The LS-design of the FIR filter can also include a weight
+  function $w(n)$, see more in the lecture notes. You can define an
+  exponential weight function as
+\begin{verbatim}
+lam = 0.95;
+w = lam.^(2*M:-1:0)
+h = lmfir(@sincos,2,M,M,w); %create filter with LS weighting
+\end{verbatim}
+  Investigate how the performance varies with \texttt{M} and \texttt{lam}
+
+\section{Report}
+\label{sec:report}
+
+Each group writes a short report which describe answers and
+explanations to the questions/tasks given above.
+\begin{itemize}
+\item 2.2. Tasks:
+  \begin{description}
+  \item[3.] Upload your file \texttt{fbmp.m} on canvas. 
+  \item[5.] Include the plot produced by \texttt{plotresults.m} in
+    your report and briefly discuss an reflect on the result.
+\end{description}
+\item  2.3 Questions: 
+  \begin{description}
+  \item[1.] Give the answer and motivation
+  \item[2.] Give the answer and motivation
+  \item[3.] Give the answer and motivation
+  \end{description}
+\item  3.1 Tasks
+  \begin{description}
+  \item[2.] Upload the completed \texttt{sincos.m} file on Canvas.
+  \item[3.] Briefly describe and interpret the results.
+  \item[4. and 5.] Summarize your findings. 
+  \end{description}
+\end{itemize}
+\bibliographystyle{IEEEtran}
+\bibliography{/Users/mckelvey/Downloads/My_Library.bib}
+\end{document}
