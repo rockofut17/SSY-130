@@ -1,4 +1,4 @@
-function [h,R] = lmfir(bfun,p,M,m0,w)
+function [h,R] = lmfir(sincos,p,M,m0,w)
 % Fir filter design based on local models
 %
 % bfun = a function handle the basis function used
@@ -14,17 +14,17 @@ function [h,R] = lmfir(bfun,p,M,m0,w)
 %
 %   T. McKelvey 2022-11-06
 
-if nargin<5,
+if nargin<5
     w = ones(2*M+1,1);
 end
 % Build R
 R = zeros(2*M+1,p);
 f = zeros(p,1);
-for nidx=1:p,
+for nidx=1:p
     for k=1:(2*M+1)
-        R(k,nidx) = bfun(nidx-1, (k-M-1));
+        R(k,nidx) = sincos(nidx-1, (k-M-1));
     end
-    f(nidx) = bfun(nidx-1,m0);
+    f(nidx) = sincos(nidx-1,m0);
 end
 %h = f'*inv(R'*diag(w)*R)*R'*diag(w);
 h = f'*((R'*diag(w)*R)\R'*diag(w));
