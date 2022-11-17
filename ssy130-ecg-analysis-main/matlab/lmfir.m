@@ -1,7 +1,7 @@
-function [h,R] = lmfir(sincos,p,M,m0,w)
+function [h,R] = lmfir(sincos,p,M,m0,lam)
 % Fir filter design based on local models
 %
-% bfun = a function handle the basis function used
+% sincos = a function handle the basis function used
 %         where bfun(i,m) should evaluate to the value for basis function index i and function argument m 
 %     p = number of basis functions (indexed from 0 to p-1)
 %     M = Window size. The disigned filter will be of length 2M+1
@@ -14,8 +14,8 @@ function [h,R] = lmfir(sincos,p,M,m0,w)
 %
 %   T. McKelvey 2022-11-06
 
-if nargin<5
-    w = ones(2*M+1,1);
+if lam>0 && lam<1
+    w = lam.^(2*M:-1:0);
 end
 % Build R
 R = zeros(2*M+1,p);
