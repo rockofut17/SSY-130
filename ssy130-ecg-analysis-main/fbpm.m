@@ -1,4 +1,4 @@
-function [heart_rate] = fbpm_berlanga(x,fs)
+function [heart_rate] = fbpm(x,fs)
 % start with w(n) = 1
 Ndtft = length(x);
 w = ones(Ndtft,1) ;
