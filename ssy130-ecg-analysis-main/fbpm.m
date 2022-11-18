@@ -11,10 +11,10 @@ Mag_Xw = abs(Xw);
 Mag = Mag_Xw(1:Ndtft/2+1);  % from matlab description of fft
 Mag(2:end-1) = 2*Mag(2:end-1); % -//-
 
-% Find maximum magnitude and index
-%Mag_int = Mag(6:33);
+% Find maximum magnitude and index. Since index represent frequency we could calculate frequency range from the heart rate interval 35-200.
+
 [mval,idx] = max(Mag(7:33));
-idx = idx + 7; 
+idx = idx + 7; % Have to take + 7 because otherwhise index 7 will become index 1 in the new vector.
 
 heart_rate = 60*(idx-1)/(Ndtft/fs);
 end
