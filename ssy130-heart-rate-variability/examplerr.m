@@ -1,74 +1,75 @@
-close all; clc;
+clear; clc; clf;
+M = 3;
 dd = dir('dataB/*.mat');
 Nfiles = length(dd);
 
-NN = 10000; % Length of Data to analyze and plot
+NN = 8000; % Length of Data to analyze and plot
 offset = 4000; %Offset into the dataset
 
 fs = 128;
 
-
 for ff = 1:Nfiles
-    M = 3;
-    p = 3;
-    m0 = M;
     load(['dataB/',dd(ff).name]);
     x0 = data(offset+(1:NN),1);
-
-    % Task 1. Filter the baseline wander
-    [b,a] = butter(3,0.6/(fs/2),"high");
-    x0filtered = filter(b,a,x0);
-
+    
+    m0 = 0 ; % could be +- M or 0. 0 to get a smoothing filter
+    % idea is that a smoothing filter can remove the bias coming from a
+    % baseline. Also the filter is of order 1, making it an averaging
+    % filter.
+    p = 3; % number of basis functions
+   
     % Here is a lmfir_diff filter designed (needs to be completed)
     h1diff = lmfir_diff(@monofun,@monoderfun,p,M,m0);
-    y1diff = filter(h1diff,1,x0filtered); 
+    %y1diff = filter(h1diff,1,x0);
     
-%     y1diff = x0filtered; % uncomment this if directly peak-find on ECG trace.
-    figure;
-    plot([y1diff 0.1*x0filtered])
+    
+    y1diff = x0; % uncomment this if directly peak-find on ECG trace.
+    figure(1)
+    plot([y1diff 0.1*x0])
     hold on
     % You need to set MPH and MPD to some good values....
-    MPH = 0.05; 
-    MPD = 75;
-    [p,r_indices] = findpeaks(y1diff,'MinPeakHeight',MPH,'MinPeakDistance',MPD);
+    [p,r_indices] = findpeaks(y1diff,'MinPeakHeight',0.1,'MinPeakDistance',60);
     plot(r_indices,p,'hr')
+    title('RR peaks and ECG trace vs sample index')
     hold off
-
-    % Task 2. Find EDR
-    [bR,aR] = butter(3,[0.2 0.4]/(fs/2),"bandpass");
-    x0Respiratory = filter(bR,aR,x0);
-    figure;
-    time = 0:1/fs:(length(x0)-1)/fs;
-    plot(x0Respiratory)
-    hold on
-    [pRespiratory,resp_indices] = findpeaks(x0Respiratory,'MinPeakHeight',0,'MinPeakDistance',200);
-    plot(resp_indices,pRespiratory,'hr')
-    hold off
-
-    % Calculate respiratory intervals
-    respIntervals = diff(resp_indices);
-    figure;
-    plot(resp_indices(1:end-1)/fs,(1./respIntervals)*fs*60)
-    xlabel('Time[s]'); ylabel('Breaths per minute')
-
-    % Calculate RR intervals
     
+    % Calculate RR intervals
     rr = diff(r_indices);
-    rrmean = mean(rr(1:60)); % We calculate the mean of some of the samples to use it for the outliers
-    % Task 3: We use neighbour data
-    for i=1:length(rr)
-        if rr(i)>120 && rr(i)<226 % Outliers frequencies that gives too low BPMs
-            rr(i) = rrmean;
-        end
-    end
-            
-    figure;
-    % Task 4
+    figure(2)
     plot(r_indices(1:end-1)/fs,(1./rr)*fs*60)
-    xlabel('Time[s]'); ylabel('Beats per minute')
-    pause
+    title('Heart rate vs time')
+    xlabel('time[s]')
+    ylabel('BPM')
+    
 
+     % Task 2
+    % Find Resp rate, look att FFT of data intervals
+    % New try, FFT(data), plot
+    x = data((1:NN),1);
+    Y = fft(x);
+    P = abs(Y/NN);
+    Fourier = P(1:NN/2+1);
+    Fourier(2:end-1) = 2*Fourier(2:end-1);
+    f = fs*(0:(NN/2))/NN;
+
+    figure(3)
+    plot(f,Fourier) % Results around 0.1 Hz, = 1/t. 
+    title('Frequency spectrum of ECG trace')
+    xlabel('frequency')
+    ylabel('Magnitude')
+    
+    
+    % Task 3 - remove outliers
+    % Threshold, plot histogram of measurment, if like gaussian, and some
+    % points stand out, remove these. Histogram of RR intervals. This is
+    % not used in the report.
+    figure(4)
+    histogram(rr)
+    pause
+ 
 end 
+
+   
 
 function f = monofun(i,m) 
     if i==0

@@ -28,4 +28,3 @@ end
 
 h = f'*inv(R'*diag(w)*R)*R'*diag(w);
 h = h(end:-1:1);
-
